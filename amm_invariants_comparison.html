@@ -1,0 +1,42 @@
+<div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 8px; font-size: 12px; color: var(--color-text-secondary);">
+<span style="display: flex; align-items: center; gap: 4px;"><span style="width: 16px; height: 3px; background: #378ADD;"></span>Constant sum (x+y=k) — плоско, опустошается</span>
+<span style="display: flex; align-items: center; gap: 4px;"><span style="width: 16px; height: 3px; background: #D85A30;"></span>Constant product (x·y=k) — выпукло, не пустеет</span>
+<span style="display: flex; align-items: center; gap: 4px;"><span style="width: 16px; height: 3px; background: #1D9E75; border-top: 2px dashed #1D9E75;"></span>StableSwap — плоско у центра, выпукло на краях</span>
+</div>
+<div style="position: relative; width: 100%; height: 340px;">
+<canvas id="inv" role="img" aria-label="Сравнение трёх инвариантов AMM. Constant sum — прямая линия. Constant product — выпуклая гипербола. StableSwap — плоская у центра, скатывается в гиперболу на краях.">Три формулы AMM: прямая (constant sum), гипербола (constant product) и stableswap — плоская у паритета и выпуклая на краях.</canvas>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const D = 100;
+const sum = [{x:0,y:100},{x:100,y:0}];
+const prod = [];
+for (let x = 12; x <= 88; x += 1) prod.push({x: x, y: 2500 / x});
+const stable = [];
+const A = 10;
+for (let x = 6; x <= 94; x += 1) {
+  const prodY = 2500 / x;
+  const sumY = 100 - x;
+  let w = Math.exp(-Math.pow((x-50)/26, 4));
+  let y = w * sumY + (1 - w) * prodY;
+  stable.push({x: x, y: y});
+}
+new Chart(document.getElementById('inv'), {
+  type: 'scatter',
+  data: {
+    datasets: [
+      { data: sum, showLine: true, borderColor: '#378ADD', borderWidth: 2, pointRadius: 0 },
+      { data: prod, showLine: true, borderColor: '#D85A30', borderWidth: 2, pointRadius: 0, tension: 0.3 },
+      { data: stable, showLine: true, borderColor: '#1D9E75', borderWidth: 2, borderDash: [6,4], pointRadius: 0, tension: 0.3 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { title: { display: true, text: 'Токен A в пуле' }, min: 0, max: 100, grid: { color: 'rgba(128,128,128,0.1)' } },
+      y: { title: { display: true, text: 'Токен B в пуле' }, min: 0, max: 100, grid: { color: 'rgba(128,128,128,0.1)' } }
+    }
+  }
+});
+</script>

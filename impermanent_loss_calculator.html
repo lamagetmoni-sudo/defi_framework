@@ -1,0 +1,55 @@
+<h2 class="sr-only">Калькулятор impermanent loss: задаёшь изменение цены и комиссии, видишь IL и итоговый результат LP против холда</h2>
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem">
+<div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:1rem">
+<div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:4px">Impermanent loss</div>
+<div id="il-out" style="font-size:24px;font-weight:500">0%</div>
+</div>
+<div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:1rem">
+<div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:4px">Заработано комиссий</div>
+<div id="fee-out" style="font-size:24px;font-weight:500">0%</div>
+</div>
+<div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:1rem">
+<div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:4px">LP против HODL</div>
+<div id="net-out" style="font-size:24px;font-weight:500">0%</div>
+</div>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+<label style="font-size:14px;color:var(--color-text-secondary);min-width:180px">Изменение цены актива</label>
+<input type="range" id="price" min="-80" max="300" step="5" value="0" style="flex:1" oninput="recalc()">
+<span id="price-lbl" style="font-size:14px;font-weight:500;min-width:64px;text-align:right">0%</span>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem">
+<label style="font-size:14px;color:var(--color-text-secondary);min-width:180px">Комиссии за период</label>
+<input type="range" id="fee" min="0" max="30" step="0.5" value="5" style="flex:1" oninput="recalc()">
+<span id="fee-lbl" style="font-size:14px;font-weight:500;min-width:64px;text-align:right">5%</span>
+</div>
+
+<div id="verdict" style="font-size:14px;padding:12px 16px;border-radius:var(--border-radius-md);background:var(--color-background-secondary);color:var(--color-text-secondary)">Двигай ползунки, чтобы увидеть, перекрывают ли комиссии IL.</div>
+
+<script>
+function recalc(){
+  const pricePct = +document.getElementById('price').value;
+  const fee = +document.getElementById('fee').value;
+  document.getElementById('price-lbl').textContent = (pricePct>0?'+':'') + pricePct + '%';
+  document.getElementById('fee-lbl').textContent = fee + '%';
+  const r = 1 + pricePct/100;
+  const ilFrac = (2 * Math.sqrt(r) / (1 + r) - 1);
+  const ilPct = ilFrac * 100;
+  const net = ilPct + fee;
+  document.getElementById('il-out').textContent = ilPct.toFixed(2) + '%';
+  document.getElementById('fee-out').textContent = '+' + fee.toFixed(1) + '%';
+  const netEl = document.getElementById('net-out');
+  netEl.textContent = (net>0?'+':'') + net.toFixed(2) + '%';
+  netEl.style.color = net >= 0 ? 'var(--color-text-success)' : 'var(--color-text-danger)';
+  const v = document.getElementById('verdict');
+  if (net >= 0) {
+    v.textContent = 'Комиссии перекрывают IL — LP выгоднее холда на ' + net.toFixed(2) + '%.';
+  } else {
+    v.textContent = 'IL съел комиссии — холд был бы выгоднее на ' + Math.abs(net).toFixed(2) + '%.';
+  }
+}
+recalc();
+</script>

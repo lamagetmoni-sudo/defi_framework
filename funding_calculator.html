@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор funding APR</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f4f3ee;
+    --text: #1a1a18;
+    --muted: #6b6a64;
+    --border: rgba(0,0,0,0.12);
+    --accent: #534AB7;
+    --success: #0F6E56;
+    --danger: #A32D2D;
+    --track: #e0ded6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1f1e1c;
+      --surface: #2a2a27;
+      --text: #ecebe5;
+      --muted: #a3a199;
+      --border: rgba(255,255,255,0.14);
+      --accent: #AFA9EC;
+      --success: #5DCAA5;
+      --danger: #F09595;
+      --track: #3a3936;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .card { background: var(--surface); border-radius: 10px; padding: 16px; }
+  .card .label { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .card .value { font-size: 24px; font-weight: 500; }
+  .row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .row label { font-size: 14px; color: var(--muted); min-width: 190px; }
+  .row .out { font-size: 14px; font-weight: 500; min-width: 64px; text-align: right; }
+  input[type=range] {
+    flex: 1; -webkit-appearance: none; appearance: none;
+    height: 4px; border-radius: 2px; background: var(--track); outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: none;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: none;
+  }
+  .verdict {
+    font-size: 14px; padding: 12px 16px; border-radius: 10px;
+    background: var(--surface); color: var(--muted);
+  }
+  @media (max-width: 520px) {
+    .cards { grid-template-columns: 1fr; }
+    .row { flex-wrap: wrap; }
+    .row label { min-width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="cards">
+    <div class="card">
+      <div class="label">Годовой funding APR</div>
+      <div class="value" id="apr-out">10.9%</div>
+    </div>
+    <div class="card">
+      <div class="label">С учётом плеча</div>
+      <div class="value" id="lev-out">10.9%</div>
+    </div>
+    <div class="card">
+      <div class="label">На $10 000 в год</div>
+      <div class="value" id="dollar-out">$1 095</div>
+    </div>
+  </div>
+
+  <div class="row">
+    <label>Funding за 8ч (%)</label>
+    <input type="range" id="rate" min="-0.05" max="0.15" step="0.005" value="0.01">
+    <span class="out" id="rate-lbl">0.010%</span>
+  </div>
+
+  <div class="row">
+    <label>Плечо на короткой ноге</label>
+    <input type="range" id="lev" min="1" max="5" step="0.5" value="1">
+    <span class="out" id="lev-lbl">1.0x</span>
+  </div>
+
+  <div class="verdict" id="verdict">Funding капает 3 раза в день (каждые 8 часов). Годовая ставка = 8ч-ставка × 3 × 365.</div>
+</div>
+
+<script>
+  var rateEl = document.getElementById('rate');
+  var levEl = document.getElementById('lev');
+  function recalc() {
+    var rate8h = parseFloat(rateEl.value);
+    var lev = parseFloat(levEl.value);
+    document.getElementById('rate-lbl').textContent = rate8h.toFixed(3) + '%';
+    document.getElementById('lev-lbl').textContent = lev.toFixed(1) + 'x';
+    var aprBase = rate8h * 3 * 365;
+    var aprLev = aprBase * lev;
+    document.getElementById('apr-out').textContent = aprBase.toFixed(1) + '%';
+    var levOut = document.getElementById('lev-out');
+    levOut.textContent = aprLev.toFixed(1) + '%';
+    levOut.style.color = aprLev >= 0 ? 'var(--success)' : 'var(--danger)';
+    var dollar = 10000 * aprLev / 100;
+    document.getElementById('dollar-out').textContent =
+      (dollar >= 0 ? '$' : '-$') + Math.abs(Math.round(dollar)).toLocaleString('ru-RU');
+    var v = document.getElementById('verdict');
+    if (rate8h < 0) {
+      v.textContent = 'Отрицательный funding: теперь ТЫ платишь. Дельта-нейтралка уходит в минус, плечо усугубляет.';
+    } else if (lev > 1) {
+      v.textContent = 'Плечо умножает и доход, и риск ликвидации короткой ноги при скачке цены. Funding-доход × ' + lev.toFixed(1) + '.';
+    } else {
+      v.textContent = 'Базовая дельта-нейтралка без плеча. Funding капает 3 раза в день, годовая = ставка × 3 × 365.';
+    }
+  }
+  rateEl.addEventListener('input', recalc);
+  levEl.addEventListener('input', recalc);
+  recalc();
+</script>
+</body>
+</html>

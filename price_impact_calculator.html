@@ -1,0 +1,53 @@
+<h2 class="sr-only">Калькулятор price impact: задаёшь размер свопа относительно пула, видишь насколько сдвинется цена по формуле constant product</h2>
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem">
+<div style="background:var(--surface-1);border-radius:var(--radius);padding:1rem">
+<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px">Price impact</div>
+<div id="pi-out" style="font-size:24px;font-weight:500">—</div>
+</div>
+<div style="background:var(--surface-1);border-radius:var(--radius);padding:1rem">
+<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px">Эффективная цена</div>
+<div id="eff-out" style="font-size:24px;font-weight:500">—</div>
+</div>
+<div style="background:var(--surface-1);border-radius:var(--radius);padding:1rem">
+<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px">Получишь на руки</div>
+<div id="get-out" style="font-size:24px;font-weight:500">—</div>
+</div>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+<label style="font-size:14px;color:var(--text-secondary);min-width:210px">Размер свопа (% от пула)</label>
+<input type="range" id="size" min="0.5" max="50" step="0.5" value="5" style="flex:1" oninput="recalc()">
+<span id="size-lbl" style="font-size:14px;font-weight:500;min-width:56px;text-align:right">5%</span>
+</div>
+
+<div id="verdict" style="font-size:14px;padding:12px 16px;border-radius:var(--radius);background:var(--surface-1);color:var(--text-secondary)">Двигай ползунок: чем больше своп относительно пула, тем сильнее ты сам двигаешь цену против себя.</div>
+
+<script>
+  function recalc(){
+    var pct = parseFloat(document.getElementById('size').value);
+    document.getElementById('size-lbl').textContent = pct + '%';
+    var x = 1000;
+    var y = 1000;
+    var k = x * y;
+    var dx = x * (pct/100);
+    var newX = x + dx;
+    var newY = k / newX;
+    var got = y - newY;
+    var spot = y / x;
+    var eff = got / dx;
+    var impact = (1 - eff/spot) * 100;
+    document.getElementById('pi-out').textContent = '−' + impact.toFixed(2) + '%';
+    document.getElementById('eff-out').textContent = eff.toFixed(4);
+    document.getElementById('get-out').textContent = got.toFixed(1) + ' / ' + dx.toFixed(0);
+    var v = document.getElementById('verdict');
+    if (impact < 1) {
+      v.textContent = 'Маленький своп (' + pct + '% пула): price impact ничтожный. Так и надо торговать.';
+    } else if (impact < 5) {
+      v.textContent = 'Заметный impact (' + impact.toFixed(1) + '%): на крупной сумме это реальные деньги. Подумай о дроблении.';
+    } else {
+      v.textContent = 'Большой impact (' + impact.toFixed(1) + '%): ты сам двигаешь цену против себя. Дроби сделку или ищи глубже пул.';
+    }
+  }
+  recalc();
+</script>
