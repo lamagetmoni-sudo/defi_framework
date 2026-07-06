@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payoff-конструктор опционов</title>
+<style>
+:root{
+  --bg:#ffffff; --card:#f5f4f0; --text:#1f1f1e; --muted:#6f6e69;
+  --border:#e2e1da; --profit:#0F6E56; --loss:#993C1D; --accentfill:#1D9E75; --lossfill:#D85A30; --marker:#534AB7;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#191918; --card:#242423; --text:#f0efec; --muted:#a3a29c;
+  --border:#3a3a37; --profit:#5DCAA5; --loss:#F0997B; --accentfill:#1D9E75; --lossfill:#D85A30; --marker:#AFA9EC; }
+}
+*{box-sizing:border-box; margin:0; padding:0}
+body{ background:var(--bg); color:var(--text); font:15px/1.6 -apple-system,"Segoe UI",Roboto,sans-serif; padding:16px; }
+.wrap{max-width:720px; margin:0 auto}
+h1{font-size:17px; font-weight:600; margin-bottom:2px}
+.sub{font-size:13px; color:var(--muted); margin-bottom:14px}
+.controls{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px}
+.seg{display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden}
+.seg button{flex:1; padding:8px 4px; background:transparent; border:none; color:var(--muted); font-size:14px; font-family:inherit; cursor:pointer}
+.seg button.on{background:var(--card); color:var(--text); font-weight:600}
+.srow{grid-column:1 / -1; display:flex; align-items:center; gap:10px; font-size:14px}
+.srow label{min-width:64px; color:var(--muted)}
+.srow input{flex:1; accent-color:var(--marker)}
+.srow output{min-width:64px; text-align:right; font-weight:600; font-variant-numeric:tabular-nums}
+.stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px}
+.stat{background:var(--card); border-radius:8px; padding:9px 12px}
+.stat .l{font-size:12px; color:var(--muted)}
+.stat .v{font-size:15px; font-weight:600; font-variant-numeric:tabular-nums}
+.chartbox{position:relative; height:300px}
+.note{font-size:12px; color:var(--muted); margin-top:10px}
+@media (max-width:480px){ .stats{grid-template-columns:1fr 1fr} .chartbox{height:260px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Payoff-конструктор опционов</h1>
+<div class="sub">P&amp;L на дату экспирации, на 1 единицу базового актива</div>
+
+<div class="controls">
+  <div class="seg" id="segType">
+    <button data-v="call" class="on">Колл</button>
+    <button data-v="put">Пут</button>
+  </div>
+  <div class="seg" id="segSide">
+    <button data-v="long" class="on">Покупка</button>
+    <button data-v="short">Продажа</button>
+  </div>
+  <div class="srow"><label>Страйк</label><input type="range" id="strike" min="1500" max="4500" step="50" value="3000"><output id="strikeOut">$3 000</output></div>
+  <div class="srow"><label>Премия</label><input type="range" id="premium" min="20" max="600" step="10" value="150"><output id="premiumOut">$150</output></div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="l">Безубыток</div><div class="v" id="be">—</div></div>
+  <div class="stat"><div class="l">Макс. прибыль</div><div class="v" id="mp">—</div></div>
+  <div class="stat"><div class="l">Макс. убыток</div><div class="v" id="ml">—</div></div>
+</div>
+
+<div class="chartbox"><canvas id="chart"></canvas></div>
+<div class="note">Учебная модель: без комиссий и фандинга. До экспирации цена опциона живёт иначе — её двигают время (тета) и волатильность (вега), см. карточку «Опционы».</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const css = getComputedStyle(document.documentElement);
+const C = {
+  profit: css.getPropertyValue('--profit').trim(),
+  loss: css.getPropertyValue('--loss').trim(),
+  accentfill: css.getPropertyValue('--accentfill').trim(),
+  lossfill: css.getPropertyValue('--lossfill').trim(),
+  marker: css.getPropertyValue('--marker').trim(),
+  muted: css.getPropertyValue('--muted').trim(),
+  border: css.getPropertyValue('--border').trim()
+};
+let type='call', side='long';
+const $=id=>document.getElementById(id);
+const fmt=v=>(v<0?'-':'')+'$'+Math.abs(Math.round(v)).toLocaleString('ru-RU');
+
+function payoff(S,K,P){
+  const intr = type==='call' ? Math.max(S-K,0) : Math.max(K-S,0);
+  return side==='long' ? intr-P : P-intr;
+}
+
+const XMIN=1000, XMAX=5000, STEP=25;
+
+const chart = new Chart($('chart'), {
+  type:'line',
+  data:{ datasets:[
+    { data:[], pointRadius:0, borderWidth:2.5, tension:0,
+      segment:{ borderColor: ctx => (ctx.p0.parsed.y + ctx.p1.parsed.y)/2 >= 0 ? C.profit : C.loss },
+      fill:{ target:{value:0}, above:C.accentfill+'26', below:C.lossfill+'26' } },
+    { data:[], pointRadius:6, pointHoverRadius:7, pointBackgroundColor:C.marker, pointBorderWidth:0, showLine:false }
+  ]},
+  options:{
+    responsive:true, maintainAspectRatio:false, animation:false,
+    interaction:{mode:'nearest', axis:'x', intersect:false},
+    plugins:{
+      legend:{display:false},
+      tooltip:{ callbacks:{
+        title:items=>'Цена на экспирации: '+fmt(items[0].parsed.x),
+        label:item=> item.datasetIndex===1 ? 'Безубыток' : 'P&L: '+fmt(item.parsed.y)
+      }}
+    },
+    scales:{
+      x:{ type:'linear', min:XMIN, max:XMAX,
+        afterBuildTicks: axis => { axis.ticks=[]; for(let v=XMIN; v<=XMAX; v+=500) axis.ticks.push({value:v}); },
+        ticks:{ color:C.muted, callback:v=>'$'+(v/1000)+'k' },
+        grid:{ color:C.border }
+      },
+      y:{
+        ticks:{ color:C.muted, callback:v=>fmt(v) },
+        grid:{ color: ctx => ctx.tick.value===0 ? C.muted : C.border,
+               lineWidth: ctx => ctx.tick.value===0 ? 1.5 : 1 }
+      }
+    }
+  }
+});
+
+function calc(){
+  const K=+$('strike').value, P=+$('premium').value;
+  $('strikeOut').textContent=fmt(K);
+  $('premiumOut').textContent=fmt(P);
+
+  const pts=[];
+  for(let S=XMIN; S<=XMAX; S+=STEP) pts.push({x:S, y:payoff(S,K,P)});
+  chart.data.datasets[0].data=pts;
+
+  const be = type==='call' ? K+P : K-P;
+  chart.data.datasets[1].data = (be>=XMIN && be<=XMAX) ? [{x:be, y:0}] : [];
+
+  let mp, ml;
+  if(type==='call'&&side==='long'){ mp='не ограничена'; ml=fmt(-P); }
+  if(type==='call'&&side==='short'){ mp=fmt(P); ml='не ограничен'; }
+  if(type==='put'&&side==='long'){ mp=fmt(K-P); ml=fmt(-P); }
+  if(type==='put'&&side==='short'){ mp=fmt(P); ml=fmt(-(K-P)); }
+  $('be').textContent=fmt(be);
+  $('mp').textContent=mp;
+  $('ml').textContent=ml;
+
+  chart.update('none');
+}
+
+function bindSeg(id, setter){
+  $(id).querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      $(id).querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+      setter(b.dataset.v);
+      calc();
+    });
+  });
+}
+bindSeg('segType', v=>type=v);
+bindSeg('segSide', v=>side=v);
+$('strike').addEventListener('input', calc);
+$('premium').addEventListener('input', calc);
+
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>location.reload());
+calc();
+</script>
+</body>
+</html>
