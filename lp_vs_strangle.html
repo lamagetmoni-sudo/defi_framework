@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LP = проданный стрэнгл</title>
+<style>
+:root{ --bg:#ffffff; --text:#1f1f1e; --muted:#6f6e69; --grid:#e2e1da; --zero:#52514e; --lp:#0F6E56; --str:#534AB7; }
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#191918; --text:#f0efec; --muted:#a3a29c; --grid:#3a3a37; --zero:#c3c2b7; --lp:#5DCAA5; --str:#AFA9EC; }
+}
+*{box-sizing:border-box; margin:0; padding:0}
+body{ background:var(--bg); color:var(--text); font:15px/1.6 -apple-system,"Segoe UI",Roboto,sans-serif; padding:16px; }
+.wrap{max-width:760px; margin:0 auto}
+h1{font-size:17px; font-weight:600; margin-bottom:2px}
+.sub{font-size:13px; color:var(--muted); margin-bottom:14px}
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+.panel .t{font-size:13px; color:var(--muted); margin-bottom:6px}
+.cbox{position:relative; height:250px}
+.note{font-size:12px; color:var(--muted); margin-top:12px}
+@media (max-width:560px){ .grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>LP-позиция = проданный стрэнгл</h1>
+<div class="sub">P&amp;L в условных процентах, схема формы — не в масштабе</div>
+<div class="grid">
+  <div class="panel">
+    <div class="t">LP vs HODL: комиссии + Impermanent Loss</div>
+    <div class="cbox"><canvas id="lpChart"></canvas></div>
+  </div>
+  <div class="panel">
+    <div class="t">Проданный стрэнгл: премия − выплаты за страйками</div>
+    <div class="cbox"><canvas id="strChart"></canvas></div>
+  </div>
+</div>
+<div class="note">Одна форма: тебе платят, пока цена стоит на месте; платишь ты — чем дальше она уехала, в любую сторону. Стрэнгл ломается в двух страйках (точки), LP гнётся плавно: это не один проданный опцион, а размазанный по всем страйкам сразу.</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const css = getComputedStyle(document.documentElement);
+const C = {
+  muted: css.getPropertyValue('--muted').trim(),
+  grid: css.getPropertyValue('--grid').trim(),
+  zero: css.getPropertyValue('--zero').trim(),
+  lp: css.getPropertyValue('--lp').trim(),
+  str: css.getPropertyValue('--str').trim()
+};
+const il = r => 2*Math.sqrt(r)/(1+r) - 1;
+const lp = [], str = [];
+for(let d=-50; d<=100; d+=5){
+  lp.push({x:d, y:+(3 + 100*il(1+d/100)).toFixed(2)});
+  str.push({x:d, y:+(3 - 0.12*Math.max(0, Math.abs(d)-25)).toFixed(2)});
+}
+function mk(id, data, color, extra){
+  new Chart(document.getElementById(id), {
+    type:'line',
+    data:{ datasets:[
+      { data:data, borderColor:color, backgroundColor:color+'22', borderWidth:2.5, pointRadius:0, tension:0, fill:{target:{value:0}} }
+    ].concat(extra||[]) },
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{
+        title:i=>'Цена: '+(i[0].parsed.x>0?'+':'')+i[0].parsed.x+'%',
+        label:i=> i.datasetIndex===1 ? 'страйк' : 'P&L: '+i.parsed.y+' усл.%'
+      }}},
+      scales:{
+        x:{ type:'linear', min:-50, max:100,
+          afterBuildTicks: a=>{ a.ticks=[-50,-25,0,25,50,75,100].map(v=>({value:v})); },
+          ticks:{ color:C.muted, callback:v=>(v>0?'+':'')+v+'%' }, grid:{ color:C.grid } },
+        y:{ min:-9, max:6, ticks:{ color:C.muted }, grid:{ color:c=>c.tick.value===0?C.zero:C.grid, lineWidth:c=>c.tick.value===0?1.5:1 } }
+      } }
+  });
+}
+mk('lpChart', lp, C.lp);
+mk('strChart', str, C.str, [{ data:[{x:-25,y:3},{x:25,y:3}], showLine:false, pointRadius:5, pointBackgroundColor:C.str, pointBorderWidth:0 }]);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>location.reload());
+</script>
+</body>
+</html>
