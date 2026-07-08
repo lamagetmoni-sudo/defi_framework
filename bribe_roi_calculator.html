@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Экономика взятки: обе стороны сделки</title>
+<style>
+:root{
+  --bg:#ffffff; --card:#f5f4f0; --text:#1f1f1e; --muted:#6f6e69;
+  --border:#e2e1da; --good:#0F6E56; --bad:#993C1D; --accent:#534AB7;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#191918; --card:#242423; --text:#f0efec; --muted:#a3a29c;
+  --border:#3a3a37; --good:#5DCAA5; --bad:#F0997B; --accent:#AFA9EC; }
+}
+*{box-sizing:border-box; margin:0; padding:0}
+body{ background:var(--bg); color:var(--text); font:15px/1.6 -apple-system,"Segoe UI",Roboto,sans-serif; padding:16px; }
+.wrap{max-width:680px; margin:0 auto}
+h1{font-size:17px; font-weight:600; margin-bottom:2px}
+.sub{font-size:13px; color:var(--muted); margin-bottom:14px}
+.srow{display:flex; align-items:center; gap:10px; font-size:14px; margin-bottom:8px}
+.srow label{min-width:210px; color:var(--muted)}
+.srow input{flex:1; accent-color:var(--accent)}
+.srow output{min-width:78px; text-align:right; font-weight:600; font-variant-numeric:tabular-nums}
+.divider{border:none; border-top:1px solid var(--border); margin:14px 0}
+.stats{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
+.stat{background:var(--card); border-radius:8px; padding:10px 12px}
+.stat .l{font-size:12px; color:var(--muted)}
+.stat .v{font-size:17px; font-weight:600; font-variant-numeric:tabular-nums}
+.stat .h{font-size:12px; margin-top:2px}
+.good{color:var(--good)}
+.bad{color:var(--bad)}
+.note{font-size:12px; color:var(--muted); margin-top:12px}
+@media (max-width:480px){ .srow label{min-width:130px; font-size:13px} .stats{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Экономика взятки: обе стороны сделки</h1>
+<div class="sub">Один gauge, один раунд голосования. Учебная модель.</div>
+
+<div class="srow"><label>Взятки в gauge за раунд, $</label><input type="range" id="bribes" min="5000" max="1000000" step="5000" value="100000"><output id="bribesOut"></output></div>
+<div class="srow"><label>Эмиссия в gauge за раунд, $</label><input type="range" id="emission" min="5000" max="2000000" step="5000" value="150000"><output id="emissionOut"></output></div>
+<div class="srow"><label>Твоя доля голосов в gauge, %</label><input type="range" id="share" min="0.01" max="5" step="0.01" value="0.1"><output id="shareOut"></output></div>
+<div class="srow"><label>Раундов в год</label><input type="range" id="rounds" min="12" max="52" step="1" value="26"><output id="roundsOut"></output></div>
+<div class="srow"><label>Стоимость твоего лока, $</label><input type="range" id="lock" min="1000" max="500000" step="1000" value="25000"><output id="lockOut"></output></div>
+
+<hr class="divider">
+
+<div class="stats">
+  <div class="stat">
+    <div class="l">Сторона проекта: efficiency</div>
+    <div class="v" id="eff">—</div>
+    <div class="h" id="effNote"></div>
+  </div>
+  <div class="stat">
+    <div class="l">Твоя сторона: bribe APR на лок</div>
+    <div class="v" id="apr">—</div>
+    <div class="h" id="aprNote"></div>
+  </div>
+  <div class="stat">
+    <div class="l">Твой доход за раунд</div>
+    <div class="v" id="perRound">—</div>
+  </div>
+  <div class="stat">
+    <div class="l">Твой доход за год</div>
+    <div class="v" id="perYear">—</div>
+  </div>
+</div>
+
+<div class="note">Без комиссий платформ (Votium берёт 2–4% от взятки), без изменения цены токена, которым платят взятку, и без decay твоего веса. Исторический ориентир зрелого рынка: $1 взятки покупает $0.5–1.5 направленной эмиссии.</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const fmt=v=>'$'+Math.round(v).toLocaleString('ru-RU');
+
+function calc(){
+  const B=+$('bribes').value, E=+$('emission').value,
+        S=+$('share').value, R=+$('rounds').value, L=+$('lock').value;
+
+  $('bribesOut').textContent=fmt(B);
+  $('emissionOut').textContent=fmt(E);
+  $('shareOut').textContent=S.toFixed(2)+'%';
+  $('roundsOut').textContent=R;
+  $('lockOut').textContent=fmt(L);
+
+  const eff=E/B;
+  const effEl=$('eff'), effNote=$('effNote');
+  effEl.textContent=eff.toFixed(2)+'×';
+  effEl.className='v '+(eff>=1?'good':'bad');
+  effNote.textContent = eff>=1
+    ? '$1 взятки покупает '+fmt(eff).replace('$','$')+' эмиссии — проекту выгодно'
+    : 'дешевле платить LP напрямую — рынок этого gauge гаснет';
+  effNote.className='h '+(eff>=1?'good':'bad');
+
+  const perRound=B*S/100;
+  const perYear=perRound*R;
+  const apr=perYear/L*100;
+
+  $('perRound').textContent=fmt(perRound);
+  $('perYear').textContent=fmt(perYear);
+  $('apr').textContent=apr.toFixed(1)+'%';
+  $('aprNote').textContent='сверх буста, комиссий протокола и движения цены';
+}
+
+['bribes','emission','share','rounds','lock'].forEach(id=>$(id).addEventListener('input', calc));
+calc();
+</script>
+</body>
+</html>
