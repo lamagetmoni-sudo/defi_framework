@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PT / YT: цена разрезанной доходности</title>
+<style>
+:root{
+  --bg:#ffffff; --card:#f5f4f0; --text:#1f1f1e; --muted:#6f6e69;
+  --border:#e2e1da; --grid:#e2e1da; --zero:#52514e;
+  --pt:#0F6E56; --yt:#D85A30; --marker:#534AB7;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#191918; --card:#242423; --text:#f0efec; --muted:#a3a29c;
+  --border:#3a3a37; --grid:#3a3a37; --zero:#c3c2b7;
+  --pt:#5DCAA5; --yt:#F0997B; --marker:#AFA9EC; }
+}
+*{box-sizing:border-box; margin:0; padding:0}
+body{ background:var(--bg); color:var(--text); font:15px/1.6 -apple-system,"Segoe UI",Roboto,sans-serif; padding:16px; }
+.wrap{max-width:720px; margin:0 auto}
+h1{font-size:17px; font-weight:600; margin-bottom:2px}
+.sub{font-size:13px; color:var(--muted); margin-bottom:14px}
+.controls{margin-bottom:14px}
+.srow{display:flex; align-items:center; gap:10px; font-size:14px; margin-bottom:8px}
+.srow label{min-width:150px; color:var(--muted)}
+.srow input{flex:1; accent-color:var(--marker)}
+.srow output{min-width:70px; text-align:right; font-weight:600; font-variant-numeric:tabular-nums}
+.stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px}
+.stat{background:var(--card); border-radius:8px; padding:9px 12px}
+.stat .l{font-size:12px; color:var(--muted)}
+.stat .v{font-size:15px; font-weight:600; font-variant-numeric:tabular-nums}
+.stat .v.pt{color:var(--pt)}
+.stat .v.yt{color:var(--yt)}
+.legend{display:flex; gap:16px; font-size:12px; color:var(--muted); margin-bottom:6px}
+.legend span{display:flex; align-items:center; gap:5px}
+.dot{width:10px; height:10px; border-radius:2px}
+.chartbox{position:relative; height:300px}
+.note{font-size:12px; color:var(--muted); margin-top:10px}
+@media (max-width:480px){ .stats{grid-template-columns:1fr 1fr} .chartbox{height:260px} .srow label{min-width:110px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>PT / YT: цена разрезанной доходности</h1>
+<div class="sub">1 единица yield-bearing актива = 1 PT + 1 YT. Учебная модель.</div>
+
+<div class="controls">
+  <div class="srow"><label>Implied APY</label><input type="range" id="apy" min="1" max="50" step="0.5" value="12"><output id="apyOut">12%</output></div>
+  <div class="srow"><label>Дней до погашения</label><input type="range" id="days" min="7" max="365" step="1" value="180"><output id="daysOut">180</output></div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="l">Цена PT</div><div class="v pt" id="ptOut">—</div></div>
+  <div class="stat"><div class="l">Цена YT</div><div class="v yt" id="ytOut">—</div></div>
+  <div class="stat"><div class="l">Доход PT за период</div><div class="v" id="retOut">—</div></div>
+</div>
+
+<div class="legend">
+  <span><span class="dot" style="background:var(--pt)"></span>PT — тянется к 1.00 к погашению</span>
+  <span><span class="dot" style="background:var(--yt)"></span>YT — тает к нулю</span>
+</div>
+<div class="chartbox"><canvas id="chart"></canvas></div>
+<div class="note">Цены в долях от единицы базового актива, PT по сложной ставке, без комиссий и спредов. Время на графике идёт слева направо: до погашения остаётся всё меньше дней. Фиолетовая точка — твоя позиция на кривой.</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const css = getComputedStyle(document.documentElement);
+const C = {
+  pt: css.getPropertyValue('--pt').trim(),
+  yt: css.getPropertyValue('--yt').trim(),
+  marker: css.getPropertyValue('--marker').trim(),
+  muted: css.getPropertyValue('--muted').trim(),
+  grid: css.getPropertyValue('--grid').trim(),
+  zero: css.getPropertyValue('--zero').trim()
+};
+const $=id=>document.getElementById(id);
+const ptPrice=(r,d)=>Math.pow(1+r/100, -d/365);
+
+const chart = new Chart($('chart'), {
+  type:'line',
+  data:{ datasets:[
+    { data:[], borderColor:C.pt, backgroundColor:C.pt+'22', borderWidth:2.5, pointRadius:0, tension:0.15 },
+    { data:[], borderColor:C.yt, backgroundColor:C.yt+'22', borderWidth:2.5, pointRadius:0, tension:0.15, borderDash:[6,4] },
+    { data:[], showLine:false, pointRadius:6, pointHoverRadius:7, pointBackgroundColor:C.marker, pointBorderWidth:0 }
+  ]},
+  options:{
+    responsive:true, maintainAspectRatio:false, animation:false,
+    interaction:{mode:'nearest', axis:'x', intersect:false},
+    plugins:{
+      legend:{display:false},
+      tooltip:{ callbacks:{
+        title:i=>'За '+Math.round(i[0].parsed.x)+' дн. до погашения',
+        label:i=> i.datasetIndex===2 ? 'твоя точка' : (i.datasetIndex===0?'PT: ':'YT: ')+i.parsed.y.toFixed(3)
+      }}
+    },
+    scales:{
+      x:{ type:'linear', min:0, max:365, reverse:true,
+        afterBuildTicks: a=>{ a.ticks=[365,270,180,90,30,0].map(v=>({value:v})); },
+        ticks:{ color:C.muted, callback:v=>v+' дн.' },
+        grid:{ color:C.grid },
+        title:{ display:true, text:'дней до погашения', color:C.muted, font:{size:12} }
+      },
+      y:{ min:0, max:1.05,
+        ticks:{ color:C.muted, callback:v=>v.toFixed(2) },
+        grid:{ color: c => (c.tick.value===0 || c.tick.value===1) ? C.zero : C.grid,
+               lineWidth: c => (c.tick.value===0 || c.tick.value===1) ? 1.5 : 1 }
+      }
+    }
+  }
+});
+
+function calc(){
+  const r=+$('apy').value, d=+$('days').value;
+  $('apyOut').textContent=r+'%';
+  $('daysOut').textContent=d;
+
+  const pt=[], yt=[];
+  for(let t=0; t<=365; t+=5){
+    const p=ptPrice(r,t);
+    pt.push({x:t, y:+p.toFixed(4)});
+    yt.push({x:t, y:+(1-p).toFixed(4)});
+  }
+  const pNow=ptPrice(r,d);
+  chart.data.datasets[0].data=pt;
+  chart.data.datasets[1].data=yt;
+  chart.data.datasets[2].data=[{x:d, y:+pNow.toFixed(4)}, {x:d, y:+(1-pNow).toFixed(4)}];
+
+  $('ptOut').textContent=pNow.toFixed(3);
+  $('ytOut').textContent=(1-pNow).toFixed(3);
+  $('retOut').textContent='+'+((1/pNow-1)*100).toFixed(2)+'%';
+
+  chart.update('none');
+}
+$('apy').addEventListener('input', calc);
+$('days').addEventListener('input', calc);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>location.reload());
+calc();
+</script>
+</body>
+</html>
