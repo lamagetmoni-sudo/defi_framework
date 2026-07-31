@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Куда текут деньги: ve vs ve(3,3)</title>
+<style>
+  :root{
+    --bg:#0e1420; --card:#141d2e; --line:#243147;
+    --text:#e6edf7; --muted:#8fa1bb;
+    --c-teal:#2dd4bf; --c-amber:#fbbf24; --c-coral:#fb7185;
+    --c-purple:#a78bfa; --c-green:#34d399; --c-gray:#64748b; --c-blue:#60a5fa;
+  }
+  html,body{margin:0;padding:0;background:var(--bg);}
+  .wrap{max-width:960px;margin:0 auto;padding:8px;}
+  svg{width:100%;height:auto;display:block;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+  .panel{fill:var(--card);stroke:var(--line);stroke-width:1;}
+  .node{fill:#1b2740;stroke:#33456a;stroke-width:1.4;rx:10;}
+  .node-purple{stroke:var(--c-purple);}
+  .node-coral{stroke:var(--c-coral);stroke-dasharray:6 4;}
+  .node-gray{stroke:var(--c-gray);stroke-dasharray:6 4;}
+  .ttl{fill:var(--text);font-size:21px;font-weight:700;}
+  .sub{fill:var(--muted);font-size:14px;}
+  .nl{fill:var(--text);font-size:15.5px;font-weight:600;}
+  .ns{fill:var(--muted);font-size:12.5px;}
+  .lbl{font-size:13px;font-weight:600;}
+  .lbl2{font-size:12px;font-weight:500;}
+  .flow{fill:none;stroke-width:2.4;}
+  .dash{stroke-dasharray:7 5;}
+  .callout{fill:#101a2d;stroke:var(--c-teal);stroke-width:1.2;}
+  .co-text{fill:var(--text);font-size:14.5px;}
+  .co-strong{fill:var(--c-teal);font-weight:700;}
+</style>
+</head>
+<body>
+<div class="wrap">
+<svg viewBox="0 0 960 1210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема денежных потоков: классический ve против ve(3,3)">
+  <defs>
+    <marker id="m-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2dd4bf"/></marker>
+    <marker id="m-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#fbbf24"/></marker>
+    <marker id="m-coral" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#fb7185"/></marker>
+    <marker id="m-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#a78bfa"/></marker>
+    <marker id="m-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#34d399"/></marker>
+    <marker id="m-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#64748b"/></marker>
+    <marker id="m-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#60a5fa"/></marker>
+  </defs>
+
+  <!-- ================= PANEL 1: CURVE ================= -->
+  <rect class="panel" x="10" y="10" width="940" height="500" rx="14"/>
+  <text class="ttl" x="34" y="52">Классический ve — Curve</text>
+  <text class="sub" x="34" y="76">LP кормят и комиссии, и эмиссия. Локеры получают долю всех комиссий протокола.</text>
+
+  <!-- nodes -->
+  <rect class="node" x="50" y="110" width="180" height="54" rx="10"/>
+  <text class="nl" x="140" y="136" text-anchor="middle">Трейдеры</text>
+  <text class="ns" x="140" y="153" text-anchor="middle">свапают в пуле</text>
+
+  <rect class="node" x="360" y="110" width="200" height="54" rx="10"/>
+  <text class="nl" x="460" y="136" text-anchor="middle">Пул WETH/USDC</text>
+  <text class="ns" x="460" y="153" text-anchor="middle">комиссии со свапов</text>
+
+  <rect class="node node-coral" x="690" y="110" width="230" height="54" rx="10"/>
+  <text class="nl" x="805" y="136" text-anchor="middle">Взятки</text>
+  <text class="ns" x="805" y="153" text-anchor="middle">внешние площадки: Votium и др.</text>
+
+  <rect class="node" x="50" y="330" width="180" height="54" rx="10"/>
+  <text class="nl" x="140" y="356" text-anchor="middle">Эмиссия CRV</text>
+  <text class="ns" x="140" y="373" text-anchor="middle">печатается каждую эпоху</text>
+
+  <rect class="node" x="360" y="330" width="200" height="54" rx="10"/>
+  <text class="nl" x="460" y="356" text-anchor="middle">LP</text>
+  <text class="ns" x="460" y="373" text-anchor="middle">поставщики ликвидности</text>
+
+  <rect class="node node-purple" x="690" y="330" width="230" height="54" rx="10"/>
+  <text class="nl" x="805" y="356" text-anchor="middle">Локеры veCRV</text>
+  <text class="ns" x="805" y="373" text-anchor="middle">все, независимо от голоса</text>
+
+  <!-- flows -->
+  <line class="flow" x1="230" y1="137" x2="352" y2="137" stroke="#60a5fa" marker-end="url(#m-blue)"/>
+  <text class="lbl" x="291" y="127" text-anchor="middle" fill="#60a5fa">объём торгов</text>
+
+  <path class="flow" d="M440 164 L440 322" stroke="#2dd4bf" marker-end="url(#m-teal)"/>
+  <text class="lbl" x="430" y="248" text-anchor="end" fill="#2dd4bf">50% комиссий</text>
+
+  <path class="flow" d="M560 155 C 680 190, 770 240, 800 322" stroke="#2dd4bf" marker-end="url(#m-teal)"/>
+  <text class="lbl" x="700" y="235" text-anchor="middle" fill="#2dd4bf">50% комиссий</text>
+  <text class="lbl2" x="700" y="252" text-anchor="middle" fill="#2dd4bf">всем локерам протокола</text>
+
+  <line class="flow" x1="230" y1="357" x2="352" y2="357" stroke="#fbbf24" marker-end="url(#m-amber)"/>
+  <text class="lbl" x="291" y="345" text-anchor="middle" fill="#fbbf24">эмиссия по голосам</text>
+  <text class="lbl2" x="291" y="400" text-anchor="middle" fill="#fbbf24">локерам-LP — буст до ×2.5</text>
+
+  <path class="flow dash" d="M690 400 C 480 470, 220 460, 145 392" stroke="#a78bfa" marker-end="url(#m-purple)"/>
+  <text class="lbl" x="440" y="470" text-anchor="middle" fill="#a78bfa">голос: какому пулу достанется эмиссия</text>
+
+  <line class="flow dash" x1="805" y1="164" x2="805" y2="322" stroke="#fb7185" marker-end="url(#m-coral)"/>
+  <text class="lbl" x="818" y="248" fill="#fb7185">взятки голосующим</text>
+
+  <!-- ================= PANEL 2: ve(3,3) ================= -->
+  <rect class="panel" x="10" y="540" width="940" height="560" rx="14"/>
+  <text class="ttl" x="34" y="582">ve(3,3) — Aerodrome / Velodrome</text>
+  <text class="sub" x="34" y="606">LP живут только на эмиссии. Комиссии и взятки целиком уходят голосу — и только за конкретный пул.</text>
+
+  <!-- nodes -->
+  <rect class="node" x="50" y="640" width="180" height="54" rx="10"/>
+  <text class="nl" x="140" y="666" text-anchor="middle">Трейдеры</text>
+  <text class="ns" x="140" y="683" text-anchor="middle">свапают в пуле</text>
+
+  <rect class="node" x="360" y="640" width="200" height="54" rx="10"/>
+  <text class="nl" x="460" y="666" text-anchor="middle">Пул WETH/USDC</text>
+  <text class="ns" x="460" y="683" text-anchor="middle">комиссии со свапов</text>
+
+  <rect class="node node-purple" x="690" y="640" width="230" height="58" rx="10"/>
+  <text class="nl" x="805" y="666" text-anchor="middle">Голосовавшие за ЭТОТ пул</text>
+  <text class="ns" x="805" y="684" text-anchor="middle">часть локеров veAERO</text>
+
+  <rect class="node" x="50" y="850" width="180" height="54" rx="10"/>
+  <text class="nl" x="140" y="876" text-anchor="middle">Эмиссия AERO</text>
+  <text class="ns" x="140" y="893" text-anchor="middle">печатается каждую эпоху</text>
+
+  <rect class="node" x="360" y="850" width="200" height="54" rx="10"/>
+  <text class="nl" x="460" y="876" text-anchor="middle">LP</text>
+  <text class="ns" x="460" y="893" text-anchor="middle">поставщики ликвидности</text>
+
+  <rect class="node node-coral" x="690" y="850" width="230" height="54" rx="10"/>
+  <text class="nl" x="805" y="876" text-anchor="middle">Взятки — встроенный рынок</text>
+  <text class="ns" x="805" y="893" text-anchor="middle">протоколы платят за эмиссию в свой пул</text>
+
+  <rect class="node node-gray" x="690" y="1000" width="230" height="54" rx="10"/>
+  <text class="nl" x="805" y="1026" text-anchor="middle">veNFT → вторичный рынок</text>
+  <text class="ns" x="805" y="1043" text-anchor="middle">лок можно продать — с дисконтом</text>
+
+  <!-- flows -->
+  <line class="flow" x1="230" y1="667" x2="352" y2="667" stroke="#60a5fa" marker-end="url(#m-blue)"/>
+  <text class="lbl" x="291" y="657" text-anchor="middle" fill="#60a5fa">объём торгов</text>
+
+  <line class="flow" x1="560" y1="667" x2="682" y2="667" stroke="#2dd4bf" marker-end="url(#m-teal)"/>
+  <text class="lbl" x="621" y="647" text-anchor="middle" fill="#2dd4bf">100% комиссий пула</text>
+  <text class="lbl2" x="621" y="712" text-anchor="middle" fill="#2dd4bf">LP не получают из них ничего</text>
+
+  <line class="flow" x1="230" y1="877" x2="352" y2="877" stroke="#fbbf24" marker-end="url(#m-amber)"/>
+  <text class="lbl" x="291" y="865" text-anchor="middle" fill="#fbbf24">только эмиссия</text>
+  <text class="lbl2" x="291" y="920" text-anchor="middle" fill="#fbbf24">весь доход LP — печатный станок</text>
+
+  <line class="flow" x1="805" y1="850" x2="805" y2="706" stroke="#fb7185" marker-end="url(#m-coral)"/>
+  <text class="lbl" x="818" y="785" fill="#fb7185">взятки голосовавшим</text>
+
+  <path class="flow dash" d="M690 720 C 460 800, 230 800, 150 842" stroke="#a78bfa" marker-end="url(#m-purple)"/>
+  <text class="lbl" x="430" y="805" text-anchor="middle" fill="#a78bfa">голоса решают, какому пулу эмиссия</text>
+
+  <path class="flow dash" d="M140 904 C 150 990, 400 1035, 682 1030" stroke="#64748b" marker-end="url(#m-gray)"/>
+  <text class="lbl" x="380" y="1000" text-anchor="middle" fill="#94a3b8">ребейз локерам · лок упакован в NFT</text>
+
+  <!-- ================= CALLOUT ================= -->
+  <rect class="callout" x="10" y="1120" width="940" height="80" rx="12"/>
+  <text class="co-text" x="34" y="1152"><tspan class="co-strong">Ключевая разница:</tspan> в Curve локер получает долю всех комиссий «за факт лока».</text>
+  <text class="co-text" x="34" y="1178">В ve(3,3) голос — рабочий актив: заработаешь ровно столько, сколько принесёт пул, за который проголосовал.</text>
+</svg>
+</div>
+</body>
+</html>
